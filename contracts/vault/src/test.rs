@@ -1505,7 +1505,10 @@ fn deduct_exceeds_max_deduct_fails() {
     client.init(&owner, &usdc, &Some(1000), &None, &None, &None, &Some(100));
 
     let result = client.try_deduct(&owner, &101, &None);
-    assert!(result.is_err(), "expected error when deduct exceeds max_deduct");
+    assert!(
+        result.is_err(),
+        "expected error when deduct exceeds max_deduct"
+    );
 }
 
 #[test]
@@ -1521,10 +1524,16 @@ fn batch_deduct_exceeds_max_deduct_fails() {
 
     let items = soroban_sdk::vec![
         &env,
-        DeductItem { amount: 51, request_id: None }
+        DeductItem {
+            amount: 51,
+            request_id: None
+        }
     ];
     let result = client.try_batch_deduct(&owner, &items);
-    assert!(result.is_err(), "expected error when batch item exceeds max_deduct");
+    assert!(
+        result.is_err(),
+        "expected error when batch item exceeds max_deduct"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1557,7 +1566,15 @@ fn owner_can_deduct_even_when_authorized_caller_is_set() {
 
     env.mock_all_auths();
     fund_vault(&usdc_admin, &vault_address, 500);
-    client.init(&owner, &usdc, &Some(500), &Some(caller.clone()), &None, &None, &None);
+    client.init(
+        &owner,
+        &usdc,
+        &Some(500),
+        &Some(caller.clone()),
+        &None,
+        &None,
+        &None,
+    );
 
     // owner should still be able to deduct alongside the authorized caller
     let remaining = client.deduct(&owner, &50, &None);
@@ -1579,10 +1596,16 @@ fn batch_deduct_unauthorized_fails() {
 
     let items = soroban_sdk::vec![
         &env,
-        DeductItem { amount: 100, request_id: None }
+        DeductItem {
+            amount: 100,
+            request_id: None
+        }
     ];
     let result = client.try_batch_deduct(&intruder, &items);
-    assert!(result.is_err(), "expected error for unauthorized batch_deduct");
+    assert!(
+        result.is_err(),
+        "expected error for unauthorized batch_deduct"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1600,7 +1623,15 @@ fn deduct_with_settlement_transfers_usdc() {
 
     env.mock_all_auths();
     fund_vault(&usdc_admin, &vault_address, 1000);
-    client.init(&owner, &usdc_address, &Some(1000), &Some(caller.clone()), &None, &None, &None);
+    client.init(
+        &owner,
+        &usdc_address,
+        &Some(1000),
+        &Some(caller.clone()),
+        &None,
+        &None,
+        &None,
+    );
     client.set_settlement(&owner, &settlement);
 
     client.deduct(&caller, &250, &None);
@@ -1620,13 +1651,27 @@ fn batch_deduct_with_settlement_transfers_usdc() {
 
     env.mock_all_auths();
     fund_vault(&usdc_admin, &vault_address, 1000);
-    client.init(&owner, &usdc_address, &Some(1000), &Some(caller.clone()), &None, &None, &None);
+    client.init(
+        &owner,
+        &usdc_address,
+        &Some(1000),
+        &Some(caller.clone()),
+        &None,
+        &None,
+        &None,
+    );
     client.set_settlement(&owner, &settlement);
 
     let items = soroban_sdk::vec![
         &env,
-        DeductItem { amount: 100, request_id: None },
-        DeductItem { amount: 200, request_id: None },
+        DeductItem {
+            amount: 100,
+            request_id: None
+        },
+        DeductItem {
+            amount: 200,
+            request_id: None
+        },
     ];
     client.batch_deduct(&caller, &items);
 
@@ -1702,7 +1747,10 @@ fn init_negative_balance_fails() {
 
     env.mock_all_auths();
     let result = client.try_init(&owner, &usdc, &Some(-1), &None, &None, &None, &None);
-    assert!(result.is_err(), "expected error for negative initial balance");
+    assert!(
+        result.is_err(),
+        "expected error for negative initial balance"
+    );
 }
 
 // ---------------------------------------------------------------------------
