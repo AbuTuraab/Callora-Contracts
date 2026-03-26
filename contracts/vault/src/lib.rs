@@ -284,7 +284,10 @@ impl CalloraVault {
         let usdc = token::Client::new(&env, &usdc_address);
         usdc.transfer(&caller, &env.current_contract_address(), &amount);
 
-        meta.balance += amount;
+        meta.balance = meta
+            .balance
+            .checked_add(amount)
+            .unwrap_or_else(|| panic!("balance overflow"));
         env.storage().instance().set(&StorageKey::Meta, &meta);
 
         env.events()
@@ -316,10 +319,11 @@ impl CalloraVault {
         assert!(authorized, "unauthorized caller");
 
         assert!(meta.balance >= amount, "insufficient balance");
-        meta.balance -= amount;
+        meta.balance = meta
+            .balance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic!("balance underflow"));
         env.storage().instance().set(&StorageKey::Meta, &meta);
-
-        // Transfer USDC to settlement contract or revenue pool if configured
         let inst = env.storage().instance();
         if let Some(settlement) = inst.get::<StorageKey, Address>(&StorageKey::Settlement) {
             let usdc_token: Address = inst.get(&StorageKey::UsdcToken).unwrap();
@@ -359,7 +363,7 @@ impl CalloraVault {
         assert!(n > 0, "batch_deduct requires at least one item");
 
         let mut running = meta.balance;
-        let mut total_amount = 0i128;
+        let mut total_amount: i128 = 0;
         for item in items.iter() {
             assert!(item.amount > 0, "amount must be positive");
             assert!(
@@ -367,13 +371,19 @@ impl CalloraVault {
                 "deduct amount exceeds max_deduct"
             );
             assert!(running >= item.amount, "insufficient balance");
-            running -= item.amount;
-            total_amount += item.amount;
+            running = running
+                .checked_sub(item.amount)
+                .unwrap_or_else(|| panic!("balance underflow"));
+            total_amount = total_amount
+                .checked_add(item.amount)
+                .unwrap_or_else(|| panic!("total overflow"));
         }
         // Apply deductions and emit per-item events.
         let mut balance = meta.balance;
         for item in items.iter() {
-            balance -= item.amount;
+            balance = balance
+                .checked_sub(item.amount)
+                .unwrap_or_else(|| panic!("balance underflow"));
             let rid = item.request_id.clone().unwrap_or(Symbol::new(&env, ""));
             env.events().publish(
                 (Symbol::new(&env, "deduct"), caller.clone(), rid),
@@ -438,7 +448,10 @@ impl CalloraVault {
             .expect("vault not initialized");
         let usdc = token::Client::new(&env, &usdc_address);
         usdc.transfer(&env.current_contract_address(), &meta.owner, &amount);
-        meta.balance -= amount;
+        meta.balance = meta
+            .balance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic!("balance underflow"));
         env.storage().instance().set(&StorageKey::Meta, &meta);
         meta.balance
     }
@@ -457,7 +470,10 @@ impl CalloraVault {
             .expect("vault not initialized");
         let usdc = token::Client::new(&env, &usdc_address);
         usdc.transfer(&env.current_contract_address(), &to, &amount);
-        meta.balance -= amount;
+        meta.balance = meta
+            .balance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic!("balance underflow"));
         env.storage().instance().set(&StorageKey::Meta, &meta);
         meta.balance
     }

@@ -490,3 +490,28 @@ fn batch_distribute_success_events() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Checked arithmetic — overflow boundary test
+// ---------------------------------------------------------------------------
+
+#[test]
+fn batch_distribute_total_overflow_panics() {
+    // Two payments whose sum overflows i128 must panic before any transfer.
+    let env = Env::default();
+    env.mock_all_auths();
+    let admin = Address::generate(&env);
+    let dev1 = Address::generate(&env);
+    let dev2 = Address::generate(&env);
+    let (pool_addr, client) = create_pool(&env);
+    let (usdc_address, _, usdc_admin) = create_usdc(&env, &admin);
+
+    client.init(&admin, &usdc_address);
+    fund_pool(&usdc_admin, &pool_addr, i128::MAX);
+
+    let mut payments: Vec<(Address, i128)> = Vec::new(&env);
+    payments.push_back((dev1.clone(), i128::MAX));
+    payments.push_back((dev2.clone(), 1_i128));
+    let result = client.try_batch_distribute(&admin, &payments);
+    assert!(result.is_err(), "expected overflow panic");
+}
