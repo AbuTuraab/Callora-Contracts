@@ -7,6 +7,10 @@ use soroban_sdk::{contract, contractimpl, token, Address, Env, Symbol, Vec};
 /// Flow: vault deduct → vault transfers USDC to this contract → admin calls distribute(to, amount).
 const ADMIN_KEY: &str = "admin";
 const USDC_KEY: &str = "usdc";
+const ERR_AMOUNT_NOT_POSITIVE: &str = "amount must be positive";
+const ERR_UNAUTHORIZED: &str = "unauthorized: caller is not admin";
+const ERR_INSUFFICIENT_BALANCE: &str = "insufficient USDC balance";
+const ERR_NOT_INITIALIZED: &str = "revenue pool not initialized";
 
 #[contract]
 pub struct RevenuePool;
@@ -126,22 +130,22 @@ impl RevenuePool {
         caller.require_auth();
         let admin = Self::get_admin(env.clone());
         if caller != admin {
-            panic!("unauthorized: caller is not admin");
+            panic!("{}", ERR_UNAUTHORIZED);
         }
         if amount <= 0 {
-            panic!("amount must be positive");
+            panic!("{}", ERR_AMOUNT_NOT_POSITIVE);
         }
 
         let usdc_address: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, USDC_KEY))
-            .expect("revenue pool not initialized");
+            .expect(ERR_NOT_INITIALIZED);
         let usdc = token::Client::new(&env, &usdc_address);
 
         let contract_address = env.current_contract_address();
         if usdc.balance(&contract_address) < amount {
-            panic!("insufficient USDC balance");
+            panic!("{}", ERR_INSUFFICIENT_BALANCE);
         }
 
         usdc.transfer(&contract_address, &to, &amount);
@@ -172,14 +176,14 @@ impl RevenuePool {
         caller.require_auth();
         let admin = Self::get_admin(env.clone());
         if caller != admin {
-            panic!("unauthorized: caller is not admin");
+            panic!("{}", ERR_UNAUTHORIZED);
         }
 
         let mut total_amount: i128 = 0;
         for payment in payments.iter() {
             let (_, amount) = payment;
             if amount <= 0 {
-                panic!("amount must be positive");
+                panic!("{}", ERR_AMOUNT_NOT_POSITIVE);
             }
             total_amount += amount;
         }
@@ -188,12 +192,12 @@ impl RevenuePool {
             .storage()
             .instance()
             .get(&Symbol::new(&env, USDC_KEY))
-            .expect("revenue pool not initialized");
+            .expect(ERR_NOT_INITIALIZED);
         let usdc = token::Client::new(&env, &usdc_address);
 
         let contract_address = env.current_contract_address();
         if usdc.balance(&contract_address) < total_amount {
-            panic!("insufficient USDC balance");
+            panic!("{}", ERR_INSUFFICIENT_BALANCE);
         }
 
         for payment in payments.iter() {
